@@ -43,7 +43,7 @@ MASTER_PORT=29500 bash run.sh imagenet_pretrain $JOB_NAME {vim_tiny, vim_small, 
 ```
 
 ## Model Weights
-WIP(111 epochs)
+WIP (111 epochs)
 <table>
   <tr>
     <th>Arch.</th>
