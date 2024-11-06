@@ -3,7 +3,7 @@
 <h3>Image BERT Pre-Training with Vision Mamba</h3>
 </div>
 
-<img width="32" alt="iBOT Icon" src=".github/ibot.png">
+<img width="32" alt="iBOT Icon" src="framework.png">
 
 ## Envs. for Pretraining
 
