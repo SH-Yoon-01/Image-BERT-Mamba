@@ -43,6 +43,7 @@ MASTER_PORT=29500 bash run.sh imagenet_pretrain $JOB_NAME {vim_tiny, vim_small, 
 ```
 
 ## Model Weights
+WIP(111 epochs)
 <table>
   <tr>
     <th>Arch.</th>
@@ -60,8 +61,7 @@ MASTER_PORT=29500 bash run.sh imagenet_pretrain $JOB_NAME {vim_tiny, vim_small, 
     <td>\</td>
     <td>\</td>
     <td>\</td>
-    <td>WIP(111 epochs)</td>
-    <td><a href="https://drive.google.com/drive/folders/11RYCRqSp-5QWlxGeuT3NSB4c5FOopem8?usp=drive_link">ckpts, logs</a></td>
+    <td><a href="https://drive.google.com/drive/folders/11RYCRqSp-5QWlxGeuT3NSB4c5FOopem8?usp=drive_link">gdrive</a></td>
   </tr>
 </table>
 
