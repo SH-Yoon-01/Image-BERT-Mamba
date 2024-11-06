@@ -42,4 +42,4 @@ MASTER_PORT=29500 bash run.sh imagenet_pretrain $JOB_NAME {vim_tiny, vim_small, 
 ```
 
 ## Acknowledgement :heart:
-This project is based on Mamba ([paper](https://arxiv.org/abs/2312.00752), [code](https://github.com/state-spaces/mamba)), Causal-Conv1d ([code](https://github.com/Dao-AILab/causal-conv1d)), DeiT ([paper](https://arxiv.org/abs/2012.12877), [code](https://github.com/facebookresearch/deit)), iBOT ([paper](https://arxiv.org/abs/2111.07832), [code](https://github.com/bytedance/ibot)). Thanks for their wonderful works.
+This project is based on Mamba ([paper](https://arxiv.org/abs/2312.00752), [code](https://github.com/state-spaces/mamba)), Causal-Conv1d ([code](https://github.com/Dao-AILab/causal-conv1d)), DeiT ([paper](https://arxiv.org/abs/2012.12877), [code](https://github.com/facebookresearch/deit)), Vision Mamba ([paper](https://arxiv.org/abs/2401.09417), [code](https://github.com/hustvl/Vim/tree/main)), iBOT ([paper](https://arxiv.org/abs/2111.07832), [code](https://github.com/bytedance/ibot)). Thanks for their wonderful works.
