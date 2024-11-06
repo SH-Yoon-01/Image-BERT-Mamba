@@ -60,8 +60,8 @@ MASTER_PORT=29500 bash run.sh imagenet_pretrain $JOB_NAME {vim_tiny, vim_small, 
     <td>\</td>
     <td>\</td>
     <td>\</td>
-    <td>work in progress (111 epochs)</td>
-    <td><a href="https://drive.google.com/drive/folders/11RYCRqSp-5QWlxGeuT3NSB4c5FOopem8?usp=drive_link">gdrive</a></td>
+    <td>WIP(111 epochs)</td>
+    <td><a href="https://drive.google.com/drive/folders/11RYCRqSp-5QWlxGeuT3NSB4c5FOopem8?usp=drive_link">ckpts, logs</a></td>
   </tr>
 </table>
 
