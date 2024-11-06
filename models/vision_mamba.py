@@ -39,17 +39,20 @@ __all__ = [
 class PatchEmbed(nn.Module):
     """ 2D Image to Patch Embedding
     """
+
     def __init__(self, img_size=224, patch_size=16, stride=16, in_chans=3, embed_dim=768, norm_layer=None, flatten=True):
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
         self.img_size = img_size
         self.patch_size = patch_size
-        self.grid_size = ((img_size[0] - patch_size[0]) // stride + 1, (img_size[1] - patch_size[1]) // stride + 1)
+        self.grid_size = ((img_size[0] - patch_size[0]) //
+                          stride + 1, (img_size[1] - patch_size[1]) // stride + 1)
         self.num_patches = self.grid_size[0] * self.grid_size[1]
         self.flatten = flatten
 
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=stride)
+        self.proj = nn.Conv2d(in_chans, embed_dim,
+                              kernel_size=patch_size, stride=stride)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
@@ -59,11 +62,11 @@ class PatchEmbed(nn.Module):
         #     x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
         # x = self.norm(x)
         return x
-    
+
 
 class Block(nn.Module):
     def __init__(
-        self, dim, mixer_cls, norm_cls=nn.LayerNorm, fused_add_norm=False, residual_in_fp32=False,drop_path=0.,
+        self, dim, mixer_cls, norm_cls=nn.LayerNorm, fused_add_norm=False, residual_in_fp32=False, drop_path=0.,
     ):
         """
         Simple block wrapping a mixer class with LayerNorm/RMSNorm and residual connection"
@@ -83,7 +86,8 @@ class Block(nn.Module):
         # import ipdb; ipdb.set_trace()
         self.mixer = mixer_cls(dim)
         self.norm = norm_cls(dim)
-        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.drop_path = DropPath(
+            drop_path) if drop_path > 0. else nn.Identity()
         if self.fused_add_norm:
             assert RMSNorm is not None, "RMSNorm import fails"
             assert isinstance(
@@ -104,12 +108,14 @@ class Block(nn.Module):
                 residual = hidden_states
             else:
                 residual = residual + self.drop_path(hidden_states)
-            
-            hidden_states = self.norm(residual.to(dtype=self.norm.weight.dtype))
+
+            hidden_states = self.norm(
+                residual.to(dtype=self.norm.weight.dtype))
             if self.residual_in_fp32:
                 residual = residual.to(torch.float32)
         else:
-            fused_add_norm_fn = rms_norm_fn if isinstance(self.norm, RMSNorm) else layer_norm_fn
+            fused_add_norm_fn = rms_norm_fn if isinstance(
+                self.norm, RMSNorm) else layer_norm_fn
             if residual is None:
                 hidden_states, residual = fused_add_norm_fn(
                     hidden_states,
@@ -129,8 +135,9 @@ class Block(nn.Module):
                     prenorm=True,
                     residual_in_fp32=self.residual_in_fp32,
                     eps=self.norm.eps,
-                )    
-        hidden_states = self.mixer(hidden_states, inference_params=inference_params)
+                )
+        hidden_states = self.mixer(
+            hidden_states, inference_params=inference_params)
         return hidden_states, residual
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
@@ -160,7 +167,8 @@ def create_block(
         ssm_cfg = {}
     factory_kwargs = {"device": device, "dtype": dtype}
     # import ipdb; ipdb.set_trace()
-    mixer_cls = partial(Mamba, d_state=d_state, layer_idx=layer_idx, bimamba_type=bimamba_type, if_divide_out=if_divide_out, init_layer_scale=init_layer_scale, **ssm_cfg, **factory_kwargs)
+    mixer_cls = partial(Mamba, d_state=d_state, layer_idx=layer_idx, bimamba_type=bimamba_type,
+                        if_divide_out=if_divide_out, init_layer_scale=init_layer_scale, **ssm_cfg, **factory_kwargs)
     norm_cls = partial(
         nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon, **factory_kwargs
     )
@@ -225,20 +233,20 @@ def segm_init_weights(m):
 
 
 class VisionMamba(nn.Module):
-    def __init__(self, 
-                 img_size=224, 
-                 patch_size=16, 
+    def __init__(self,
+                 img_size=224,
+                 patch_size=16,
                  stride=16,
-                 depth=24, 
-                 embed_dim=192, 
+                 depth=24,
+                 embed_dim=192,
                  d_state=16,
-                 channels=3, 
+                 channels=3,
                  num_classes=1000,
-                 ssm_cfg=None, 
+                 ssm_cfg=None,
                  drop_rate=0.,
                  drop_path_rate=0.1,
-                 norm_epsilon: float = 1e-5, 
-                 rms_norm: bool = True, 
+                 norm_epsilon: float = 1e-5,
+                 rms_norm: bool = True,
                  initializer_cfg=None,
                  fused_add_norm=True,
                  residual_in_fp32=True,
@@ -251,7 +259,6 @@ class VisionMamba(nn.Module):
                  if_abs_pos_embed=True,
                  if_rope=False,
                  if_rope_residual=False,
-                 flip_img_sequences_ratio=-1.,
                  if_bimamba=False,
                  bimamba_type="v2",
                  if_cls_token=True,
@@ -265,7 +272,7 @@ class VisionMamba(nn.Module):
                  **kwargs):
         factory_kwargs = {"device": device, "dtype": dtype}
         # add factory_kwargs into kwargs
-        kwargs.update(factory_kwargs) 
+        kwargs.update(factory_kwargs)
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
         self.fused_add_norm = fused_add_norm
@@ -274,7 +281,6 @@ class VisionMamba(nn.Module):
         self.if_abs_pos_embed = if_abs_pos_embed
         self.if_rope = if_rope
         self.if_rope_residual = if_rope_residual
-        self.flip_img_sequences_ratio = flip_img_sequences_ratio
         self.if_cls_token = if_cls_token
         self.use_double_cls_token = use_double_cls_token
         self.use_middle_cls_token = use_middle_cls_token
@@ -282,7 +288,8 @@ class VisionMamba(nn.Module):
 
         # pretrain parameters
         self.num_classes = num_classes
-        self.d_model = self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+        # num_features for consistency with other models
+        self.d_model = self.num_features = self.embed_dim = embed_dim
 
         self.patch_embed = PatchEmbed(
             img_size=img_size, patch_size=patch_size, stride=stride, in_chans=channels, embed_dim=embed_dim)
@@ -290,15 +297,20 @@ class VisionMamba(nn.Module):
 
         if if_cls_token:
             if use_double_cls_token:
-                self.cls_token_head = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
-                self.cls_token_tail = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
-                self.num_tokens = 2
+                raise NotImplemented
+                # self.cls_token_head = nn.Parameter(
+                #     torch.zeros(1, 1, self.embed_dim))
+                # self.cls_token_tail = nn.Parameter(
+                #     torch.zeros(1, 1, self.embed_dim))
+                # self.num_tokens = 2
             else:
-                self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
+                self.cls_token = nn.Parameter(
+                    torch.zeros(1, 1, self.embed_dim))
                 # self.num_tokens = 1
-            
+
         if if_abs_pos_embed:
-            self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + self.num_tokens, self.embed_dim))
+            self.pos_embed = nn.Parameter(torch.zeros(
+                1, num_patches + self.num_tokens, self.embed_dim))
             self.pos_drop = nn.Dropout(p=drop_rate)
 
         if if_rope:
@@ -309,15 +321,17 @@ class VisionMamba(nn.Module):
                 pt_seq_len=pt_hw_seq_len,
                 ft_seq_len=hw_seq_len
             )
-        self.head = nn.Linear(self.num_features, num_classes) if num_classes > 0 else nn.Identity()
-
+        self.head = nn.Linear(
+            self.num_features, num_classes) if num_classes > 0 else nn.Identity()
 
         # TODO: release this comment
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        # stochastic depth decay rule
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]
         # import ipdb;ipdb.set_trace()
         inter_dpr = [0.0] + dpr
-        self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0. else nn.Identity()
-                # transformer blocks
+        self.drop_path = DropPath(
+            drop_path_rate) if drop_path_rate > 0. else nn.Identity()
+        # transformer blocks
         self.layers = nn.ModuleList(
             [
                 create_block(
@@ -339,12 +353,12 @@ class VisionMamba(nn.Module):
                 for i in range(depth)
             ]
         )
-        
+
         # output head
         self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
             embed_dim, eps=norm_epsilon, **factory_kwargs
         )
-        
+
         # self.pre_logits = nn.Identity()
 
         # original init
@@ -354,8 +368,9 @@ class VisionMamba(nn.Module):
             trunc_normal_(self.pos_embed, std=.02)
         if if_cls_token:
             if use_double_cls_token:
-                trunc_normal_(self.cls_token_head, std=.02)
-                trunc_normal_(self.cls_token_tail, std=.02)
+                raise NotImplemented
+                # trunc_normal_(self.cls_token_head, std=.02)
+                # trunc_normal_(self.cls_token_tail, std=.02)
             else:
                 trunc_normal_(self.cls_token, std=.02)
 
@@ -367,20 +382,20 @@ class VisionMamba(nn.Module):
                 **(initializer_cfg if initializer_cfg is not None else {}),
             )
         )
-        
+
         self.return_all_tokens = return_all_tokens
-        
+
         self.use_mean_pooling = use_mean_pooling
-        
+
         # masked image modeling
         self.masked_im_modeling = masked_im_modeling
         if masked_im_modeling:
             self.masked_embed = nn.Parameter(torch.zeros(1, embed_dim))
 
-
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return {
-            i: layer.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
+            i: layer.allocate_inference_cache(
+                batch_size, max_seqlen, dtype=dtype, **kwargs)
             for i, layer in enumerate(self.layers)
         }
 
@@ -405,7 +420,8 @@ class VisionMamba(nn.Module):
         if self.use_middle_cls_token:
             M = self.pos_embed.shape[1] // 2
             class_pos_embed = self.pos_embed[:, M:M+1]
-            patch_pos_embed = torch.cat((self.pos_embed[:, :M], self.pos_embed[:, M+1:]), dim=1)            
+            patch_pos_embed = torch.cat(
+                (self.pos_embed[:, :M], self.pos_embed[:, M+1:]), dim=1)
         else:
             class_pos_embed = self.pos_embed[:, :1]
             patch_pos_embed = self.pos_embed[:, 1:]
@@ -416,17 +432,18 @@ class VisionMamba(nn.Module):
         # see discussion at https://github.com/facebookresearch/dino/issues/8
         w0, h0 = w0 + 0.1, h0 + 0.1
         patch_pos_embed = nn.functional.interpolate(
-            patch_pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2),
+            patch_pos_embed.reshape(1, int(math.sqrt(N)), int(
+                math.sqrt(N)), dim).permute(0, 3, 1, 2),
             scale_factor=(w0 / math.sqrt(N), h0 / math.sqrt(N)),
             mode="bicubic",
         )
         assert int(w0) == patch_pos_embed.shape[-2] and int(h0) == patch_pos_embed.shape[-1]
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         if self.use_middle_cls_token:
-            interpolated_pos_encoding = torch.cat((patch_pos_embed[:, :M], class_pos_embed, patch_pos_embed[:, M:]), dim=1)
+            interpolated = torch.cat((patch_pos_embed[:, :M], class_pos_embed, patch_pos_embed[:, M:]), dim=1)
         else:
-            interpolated_pos_encoding = torch.cat((class_pos_embed, patch_pos_embed), dim=1)
-        return interpolated_pos_encoding
+            interpolated = torch.cat((class_pos_embed, patch_pos_embed), dim=1)
+        return interpolated
 
     def prepare_tokens(self, x, mask=None):
         B, nc, w, h = x.shape
@@ -438,12 +455,12 @@ class VisionMamba(nn.Module):
             x = self.mask_model(x, mask)
         x = x.flatten(2).transpose(1, 2)
         x = self.patch_embed.norm(x)
-        
+
         M = x.shape[1]
 
         if self.if_cls_token:
             if self.use_double_cls_token:
-                raise NotImpelentedError
+                raise NotImplemented
                 # cls_token_head = self.cls_token_head.expand(B, -1, -1)
                 # cls_token_tail = self.cls_token_tail.expand(B, -1, -1)
                 # token_position = [0, M + 1]
@@ -453,14 +470,11 @@ class VisionMamba(nn.Module):
                     cls_token = self.cls_token.expand(B, -1, -1)
                     token_position = M // 2
                     # add cls token in the middle
-                    x = torch.cat((x[:, :token_position, :], cls_token, x[:, token_position:, :]), dim=1)
-                # elif if_random_cls_token_position:
-                #     cls_token = self.cls_token.expand(B, -1, -1)
-                #     token_position = random.randint(0, M)
-                #     x = torch.cat((x[:, :token_position, :], cls_token, x[:, token_position:, :]), dim=1)
-                #     print("token_position: ", token_position)
+                    x = torch.cat(
+                        (x[:, :token_position, :], cls_token, x[:, token_position:, :]), dim=1)
                 else:
-                    cls_token = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+                    # stole cls_tokens impl from Phil Wang, thanks
+                    cls_token = self.cls_token.expand(B, -1, -1)
                     x = torch.cat((cls_token, x), dim=1)
 
         if self.if_abs_pos_embed:
@@ -475,10 +489,10 @@ class VisionMamba(nn.Module):
 
         return self.pos_drop(x)
 
-    def forward_features(self, x, inference_params=None, if_random_cls_token_position=False, if_random_token_rank=False, return_all_tokens=None, mask=None):
+    def forward_features(self, x, inference_params=None, return_all_tokens=None, mask=None):
         # taken from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
         # with slight modifications to add the dist_token
-        
+
         # mim
         if self.masked_im_modeling:
             assert mask is not None
@@ -486,67 +500,20 @@ class VisionMamba(nn.Module):
         else:
             x = self.prepare_tokens(x)
 
-        if if_random_token_rank:
-
-            # 生成随机 shuffle 索引
-            shuffle_indices = torch.randperm(M)
-
-            if isinstance(token_position, list):
-                print("original value: ", x[0, token_position[0], 0], x[0, token_position[1], 0])
-            else:
-                print("original value: ", x[0, token_position, 0])
-            print("original token_position: ", token_position)
-
-            # 执行 shuffle
-            x = x[:, shuffle_indices, :]
-
-            if isinstance(token_position, list):
-                # 找到 cls token 在 shuffle 之后的新位置
-                new_token_position = [torch.where(shuffle_indices == token_position[i])[0].item() for i in range(len(token_position))]
-                token_position = new_token_position
-            else:
-                # 找到 cls token 在 shuffle 之后的新位置
-                token_position = torch.where(shuffle_indices == token_position)[0].item()
-
-            if isinstance(token_position, list):
-                print("new value: ", x[0, token_position[0], 0], x[0, token_position[1], 0])
-            else:
-                print("new value: ", x[0, token_position, 0])
-            print("new token_position: ", token_position)
-
-
-
-
-        if_flip_img_sequences = False
-        if self.flip_img_sequences_ratio > 0 and (self.flip_img_sequences_ratio - random.random()) > 1e-5:
-            x = x.flip([1])
-            if_flip_img_sequences = True
-
         # mamba impl
         residual = None
         hidden_states = x
         if not self.if_bidirectional:
             for layer in self.layers:
-
-                if if_flip_img_sequences and self.if_rope:
-                    hidden_states = hidden_states.flip([1])
-                    if residual is not None:
-                        residual = residual.flip([1])
-
                 # rope about
                 if self.if_rope:
                     hidden_states = self.rope(hidden_states)
                     if residual is not None and self.if_rope_residual:
                         residual = self.rope(residual)
-
-                if if_flip_img_sequences and self.if_rope:
-                    hidden_states = hidden_states.flip([1])
-                    if residual is not None:
-                        residual = residual.flip([1])
-
                 hidden_states, residual = layer(
                     hidden_states, residual, inference_params=inference_params
                 )
+
         else:
             # get two layers in a single for-loop
             for i in range(len(self.layers) // 2):
@@ -554,7 +521,6 @@ class VisionMamba(nn.Module):
                     hidden_states = self.rope(hidden_states)
                     if residual is not None and self.if_rope_residual:
                         residual = self.rope(residual)
-
                 hidden_states_f, residual_f = self.layers[i * 2](
                     hidden_states, residual, inference_params=inference_params
                 )
@@ -569,25 +535,33 @@ class VisionMamba(nn.Module):
                 residual = hidden_states
             else:
                 residual = residual + self.drop_path(hidden_states)
-            
+
             assert self.if_cls_token
             if self.use_middle_cls_token:
-                M = residual.shape[1]
-                M = M // 2
-                hidden_states[:, M] = self.norm_f(torch.cat((residual[:, :M, :], residual[:, M+1:, :]), dim=1).mean(1).to(dtype=self.norm_f.weight.dtype))
+                token_position = residual.shape[1] // 2
+                hidden_states[:, token_position] = self.norm_f(
+                    torch.cat((residual[:, :token_position, :], residual[:, token_position+1:, :]),
+                              dim=1).mean(1).to(dtype=self.norm_f.weight.dtype)
+                )
             else:
-                hidden_states[:, 0] = self.norm_f(residual[:, 1:, :].mean(1).to(dtype=self.norm_f.weight.dtype))
-                    
+                token_position = 0
+                hidden_states[:, token_position] = self.norm_f(
+                    residual[:, token_position+1:,
+                             :].mean(1).to(dtype=self.norm_f.weight.dtype)
+                )
+
         else:
             if not self.fused_add_norm:
                 if residual is None:
                     residual = hidden_states
                 else:
                     residual = residual + self.drop_path(hidden_states)
-                hidden_states = self.norm_f(residual.to(dtype=self.norm_f.weight.dtype))
+                hidden_states = self.norm_f(
+                    residual.to(dtype=self.norm_f.weight.dtype))
             else:
                 # Set prenorm=False here since we don't need the residual
-                fused_add_norm_fn = rms_norm_fn if isinstance(self.norm_f, RMSNorm) else layer_norm_fn
+                fused_add_norm_fn = rms_norm_fn if isinstance(
+                    self.norm_f, RMSNorm) else layer_norm_fn
                 hidden_states = fused_add_norm_fn(
                     self.drop_path(hidden_states),
                     self.norm_f.weight,
@@ -597,20 +571,19 @@ class VisionMamba(nn.Module):
                     prenorm=False,
                     residual_in_fp32=self.residual_in_fp32,
                 )
-            
+
         return_all_tokens = self.return_all_tokens if return_all_tokens is None else return_all_tokens
         if return_all_tokens:
-            return hidden_states;
+            return hidden_states
 
         # return only cls token if it exists
         if self.if_cls_token:
             if self.use_double_cls_token:
-                return (hidden_states[:, token_position[0], :] + hidden_states[:, token_position[1], :]) / 2
+                raise NotImplemented
+                # return (hidden_states[:, token_position[0], :] + hidden_states[:, token_position[1], :]) / 2
             else:
                 if self.use_middle_cls_token:
                     return hidden_states[:, token_position, :]
-                # elif if_random_cls_token_position:
-                #     return hidden_states[:, token_position, :]
                 else:
                     return hidden_states[:, token_position, :]
 
@@ -625,22 +598,24 @@ class VisionMamba(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, x, return_features=False, inference_params=None, if_random_cls_token_position=False, if_random_token_rank=False, return_all_tokens=None, mask=None):
+    def forward(self, x, return_features=False, inference_params=None, return_all_tokens=None, mask=None):
         return_all_tokens = self.return_all_tokens if return_all_tokens is None else return_all_tokens
         x = self.forward_features(
-            x, 
-            inference_params, 
-            if_random_cls_token_position=if_random_cls_token_position, 
-            if_random_token_rank=if_random_token_rank, 
-            return_all_tokens=return_all_tokens, 
+            x,
+            inference_params,
+            return_all_tokens=return_all_tokens,
             mask=mask
         )
         if return_features or return_all_tokens:
             return x
+
         x = self.head(x)
+
         if self.final_pool_type == "max":
             x = x.max(dim=1)[0]
+
         return x
+
 
 @register_model
 def vim_tiny(
@@ -652,24 +627,24 @@ def vim_tiny(
     **kwargs
 ):
     model = VisionMamba(
-        patch_size=patch_size, 
-        embed_dim=192, 
-        depth=24, 
-        rms_norm=True, 
-        residual_in_fp32=True, 
-        fused_add_norm=True, 
-        final_pool_type="mean", 
-        if_abs_pos_embed=True, 
-        if_rope=False, 
-        if_rope_residual=False, 
-        bimamba_type="none", 
-        if_cls_token=True, 
-        if_divide_out=False, 
-        use_middle_cls_token=False, 
-        drop_path_rate=drop_path_rate, 
+        patch_size=patch_size,
+        embed_dim=192,
+        depth=24,
+        rms_norm=True,
+        residual_in_fp32=True,
+        fused_add_norm=True,
+        final_pool_type="mean",
+        if_abs_pos_embed=True,
+        if_rope=False,
+        if_rope_residual=False,
+        bimamba_type="none",
+        if_cls_token=True,
+        if_divide_out=False,
+        use_middle_cls_token=False,
+        drop_path_rate=drop_path_rate,
         return_all_tokens=return_all_tokens,
         use_mean_pooling=True,
-        masked_im_modeling=masked_im_modeling, 
+        masked_im_modeling=masked_im_modeling,
         **kwargs
     )
     model.default_cfg = _cfg()
@@ -680,6 +655,7 @@ def vim_tiny(
         )
         model.load_state_dict(checkpoint["model"])
     return model
+
 
 @register_model
 def vim_small(
@@ -705,10 +681,10 @@ def vim_small(
         if_cls_token=True,
         if_divide_out=False,
         use_middle_cls_token=False,
-        drop_path_rate=drop_path_rate, 
-        return_all_tokens=return_all_tokens, 
+        drop_path_rate=drop_path_rate,
+        return_all_tokens=return_all_tokens,
         use_mean_pooling=True,
-        masked_im_modeling=masked_im_modeling, 
+        masked_im_modeling=masked_im_modeling,
         **kwargs
     )
     model.default_cfg = _cfg()
@@ -719,6 +695,7 @@ def vim_small(
         )
         model.load_state_dict(checkpoint["model"])
     return model
+
 
 @register_model
 def vim_base(
@@ -745,10 +722,10 @@ def vim_base(
         if_cls_token=True,
         if_divide_out=False,
         use_middle_cls_token=False,
-        drop_path_rate=drop_path_rate, 
-        return_all_tokens=return_all_tokens, 
+        drop_path_rate=drop_path_rate,
+        return_all_tokens=return_all_tokens,
         use_mean_pooling=True,
-        masked_im_modeling=masked_im_modeling, 
+        masked_im_modeling=masked_im_modeling,
         **kwargs
     )
     model.default_cfg = _cfg()
